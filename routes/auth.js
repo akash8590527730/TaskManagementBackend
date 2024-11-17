@@ -1,32 +1,129 @@
-// const express = require('express');
-// const User = require('../models/User');
-// const jwt = require('jsonwebtoken');
-// const router = express.Router();
+const express = require('express');
+const bcrypt = require('bcrypt')
+const jwt = require('jsonwebtoken');
+const User = require('../models/User.js'); 
+const router = express.Router();
 
-// router.post('/register', async (req, res) => {
-//   const { email, password } = req.body;
-//   const existingUser = await User.findOne({ email });
-  
-//   if (existingUser) return res.status(400).json({ message: 'User already exists' });
-  
-//   const user = new User({ email, password });
-//   await user.save();
 
-//   const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET);
-//   res.status(201).json({ token });
-// });
+router.post('/register', async (req, res) => {
+  const { name, email, password } = req.body;
 
-// router.post('/login', async (req, res) => {
-//   const { email, password } = req.body;
-  
-//   const user = await User.findOne({ email });
-//   if (!user) return res.status(400).json({ message: 'Invalid credentials' });
-  
-//   const isMatch = await user.comparePassword(password);
-//   if (!isMatch) return res.status(400).json({ message: 'Invalid credentials' });
-  
-//   const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET);
-//   res.status(200).json({ token });
-// });
+  try {
+    
+    const userExists = await User.findOne({ email });
+    if (userExists) {
+      return res.status(400).json({ message: 'User already exists' });
+    }
 
-// module.exports = router;
+    
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    
+    const newUser = new User({
+      name,
+      email,
+      password: hashedPassword
+    });
+
+    
+    await newUser.save();
+    
+    
+    const token = jwt.sign({ id: newUser._id }, process.env.JWT_SECRET, { expiresIn: '10h' });
+
+    res.status(201).json({ token });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error'});
+}
+});
+
+router.post('/login', async (req, res) => {
+    const { email, password } = req.body;
+  
+    try {
+      
+      const user = await User.findOne({ email });
+      if (!user) {
+        return res.status(400).json({ message: 'User does not exist' });
+      }
+  
+      
+      const isMatch = await bcrypt.compare(password, user.password);
+      if (!isMatch) {
+        return res.status(400).json({ message: 'Invalid credentials' });
+      }
+  
+      
+      const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
+  
+      res.status(200).json({ token });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: 'Server error'});
+  }
+  });
+
+  router.post('/register', async (req, res) => {
+    const { name, email, password } = req.body;
+  
+    try {
+      
+      const userExists = await User.findOne({ email });
+      if (userExists) {
+        return res.status(400).json({ message: 'User already exists' });
+      }
+  
+      
+      const hashedPassword = await bcrypt.hash(password, 10);
+  
+      
+      const newUser = new User({
+        name,
+        email,
+        password: hashedPassword
+      });
+  
+      
+      await newUser.save();
+      
+      
+      const token = jwt.sign({ id: newUser._id }, process.env.JWT_SECRET, { expiresIn: '10h' });
+  
+      res.status(201).json({ token });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: 'Server error' });
+    }
+  });
+  
+  
+  router.post('/login', async (req, res) => {
+    const { email, password } = req.body;
+  
+    try {
+      
+      const user = await User.findOne({ email });
+      if (!user) {
+        return res.status(400).json({ message: 'User does not exist' });
+      }
+  
+      
+      const isMatch = await bcrypt.compare(password, user.password);
+      if (!isMatch) {
+        return res.status(400).json({ message: 'Invalid credentials' });
+      }
+  
+      
+      const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
+  
+      res.status(200).json({ token });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: 'Server error' });
+    }
+  });
+  
+  
+  
+module.exports = router;
